@@ -1,3 +1,6 @@
+Fork of socceraction, that adds calculation of xG and defensive xT.
+---------------------------------------------------------------------
+
 <div align="center">
 	<img src="https://socceraction.readthedocs.io/en/latest/_static/logo_white.png" height="200">
 	<p>
