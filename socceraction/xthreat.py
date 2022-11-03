@@ -464,6 +464,109 @@ class ExpectedThreat:
         ratings[move_actions.index] = xT_end - xT_start
         return ratings
 
+    def rate_defensive(
+        self, actions: DataFrame[SPADLSchema], use_interpolation: bool = False
+    ) -> npt.NDArray[np.float64]:
+        """Compute the defensive xT values for the given actions.
+        Calculates the prevented defensive xT for the given actions.
+
+        Parameters
+        ----------
+        actions : pd.DataFrame
+            Actions, in SPADL format.
+        use_interpolation : bool
+            Indicates whether to use bilinear interpolation when inferring xT
+            values. Note that this requires Scipy to be installed (pip install
+            scipy).
+
+        Returns
+        -------
+        np.ndarray
+            The defensive xT value for each action.
+        """
+        if not np.any(self.xT):
+            raise NotFittedError()
+
+        if not use_interpolation:
+            l = self.l
+            w = self.w
+            grid = self.xT
+        else:
+            # Use interpolation to create a
+            # more fine-grained 1050 x 680 grid
+            interp = self.interpolator()
+            l = int(spadlconfig.field_length * 10)
+            w = int(spadlconfig.field_width * 10)
+            xs = np.linspace(0, spadlconfig.field_length, l)
+            ys = np.linspace(0, spadlconfig.field_width, w)
+            grid = interp(xs, ys)
+
+        ratings = np.empty(len(actions))
+        ratings[:] = np.NaN
+
+        move_actions = actions[(actions.result_id == spadlconfig.results.index('success'))]
+
+        # startxc, startyc = _get_cell_indexes(move_actions.start_x, move_actions.start_y, l, w)
+        endxc, endyc = _get_cell_indexes(move_actions.end_x, move_actions.end_y, l, w)
+
+        # xT_start = grid[startyc.rsub(w - 1), startxc]
+        xT_end = grid[endyc.rsub(w - 1), endxc]
+
+        ratings[move_actions.index] = xT_end
+        return ratings
+
+    def rate_xG(
+        self, actions: DataFrame[SPADLSchema], use_interpolation: bool = False
+    ) -> npt.NDArray[np.float64]:
+        """Compute the xG values for the given actions.
+        Calculates the xG for the given actions (shots).
+
+        Parameters
+        ----------
+        actions : pd.DataFrame
+            Shot-Actions, in SPADL format.
+        use_interpolation : bool
+            Indicates whether to use bilinear interpolation when inferring xT
+            values. Note that this requires Scipy to be installed (pip install
+            scipy).
+
+        Returns
+        -------
+        np.ndarray
+            The xG value for each action.
+        """
+        if not np.any(self.xT):
+            raise NotFittedError()
+
+        if not use_interpolation:
+            l = self.l
+            w = self.w
+            grid = self.xT
+        else:
+            # Use interpolation to create a
+            # more fine-grained 1050 x 680 grid
+            interp = self.interpolator()
+            l = int(spadlconfig.field_length * 10)
+            w = int(spadlconfig.field_width * 10)
+            xs = np.linspace(0, spadlconfig.field_length, l)
+            ys = np.linspace(0, spadlconfig.field_width, w)
+            grid = interp(xs, ys)
+
+        ratings = np.empty(len(actions))
+        ratings[:] = np.NaN
+
+        shot_actions = actions.reset_index()
+
+        startxc, startyc = _get_cell_indexes(shot_actions.start_x, shot_actions.start_y, l, w)
+        #endxc, endyc = _get_cell_indexes(shot_actions.end_x, shot_actions.end_y, l, w)
+
+        xT_start = grid[startyc.rsub(w - 1), startxc]
+        # xT_end = grid[endyc.rsub(w - 1), endxc]
+
+        # ratings[shot_actions.index] = xT_end - xT_start
+        ratings[shot_actions.index] = xT_start
+        return ratings
+
     def save_model(self, filepath: str, overwrite: bool = True) -> None:
         """Save the xT value surface in JSON format.
 
